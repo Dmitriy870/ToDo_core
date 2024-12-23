@@ -9,7 +9,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data1  # Используем Docker Volume
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - core_network
 
@@ -90,7 +92,7 @@ services:
 
 networks:
   core_network:
-    driver: bridge
+    external: true
 
 volumes:
-  postgres_data:  # Объявляем Docker Volume для хранения данных PostgreSQL
+  postgres_data:
