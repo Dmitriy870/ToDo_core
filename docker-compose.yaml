@@ -37,13 +37,16 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ALLOW_ANONYMOUS_LOGIN: "yes"  # Разрешаем анонимные подключения
     networks:
       - core_network
 
   core:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: core_app
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python todocore/manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
@@ -61,9 +64,11 @@ services:
       - core_network
 
   celery:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: core_celery
-    command: celery -A core worker --loglevel=info
+    command: celery -A todocore worker --loglevel=info
     depends_on:
       - db
       - redis
@@ -76,9 +81,11 @@ services:
       - core_network
 
   celery-beat:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: core_celery_beat
-    command: celery -A core beat --loglevel=info
+    command: celery -A todocore beat --loglevel=info
     depends_on:
       - db
       - redis
