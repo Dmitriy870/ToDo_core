@@ -3,5 +3,4 @@
 # Выполняем миграции
 python manage.py migrate --noinput
 
-# Запускаем Django
-exec "$@"
+python manage.py runserver 0.0.0.0:8000

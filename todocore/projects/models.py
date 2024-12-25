@@ -1,6 +1,5 @@
+from common.models import Base
 from django.db import models
-
-from todocore.common.models import Base
 
 
 class Project(Base):

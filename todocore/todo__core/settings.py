@@ -21,7 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-fhl68s(l3qxi3wu4bf)3&guabwh03alw-=b5uk46%%f*(x#dqd"
+# SECRET_KEY = "django-insecure-fhl68s(l3qxi3wu4bf)3&guabwh03alw-=b5uk46%%f*(x#dqd"
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_yasg",
+    "common",
+    # "projects",
 ]
 
 MIDDLEWARE = [
@@ -83,7 +86,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "core_db"),
         "USER": os.getenv("POSTGRES_USER", "core_user"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "core_password"),
-        "HOST": "db",
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
