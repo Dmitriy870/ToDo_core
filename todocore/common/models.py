@@ -10,3 +10,19 @@ class Base(models.Model):
 
     class Meta:
         abstract = True
+
+
+class User(Base):
+
+    class Meta:
+        db_table = "user"
+
+
+class Position(Base):
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "position"
+
+    def __str__(self):
+        return self.name
