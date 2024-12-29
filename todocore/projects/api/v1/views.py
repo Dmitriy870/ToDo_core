@@ -1,4 +1,5 @@
 from common.models import User
+from common.pagination import StandardResultsSetPagination
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -20,6 +21,7 @@ from rest_framework.response import Response
 
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
+    pagination_class = StandardResultsSetPagination
 
     def get_serializer_class(self):
         if self.action in ["create", "update"]:
@@ -27,11 +29,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         elif self.action == "partial_update":
             return ProjectPartialUpdateSerializer
         return ProjectSerializer
-
-    def list(self, request, *args, **kwargs):
-        projects = ProjectService.get_all_projects()
-        serializer = ProjectSerializer(projects, many=True)
-        return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         pk = kwargs.get("pk")

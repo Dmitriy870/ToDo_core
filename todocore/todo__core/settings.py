@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "common",
     "projects",
     "task",
+    "django_filters",
 ]
 
 SWAGGER_SETTINGS = {"SECURITY_DEFINITIONS": {"Basic": {"type": "basic"}}}
