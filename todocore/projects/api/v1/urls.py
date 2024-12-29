@@ -21,7 +21,7 @@ project_user_urls = [
 
 project_search_url = [
     path(
-        "api/v1/project/",
+        "projects/",
         ProjectSearchViewSet.as_view({"get": "list"}),
         name="project-search",
     ),
