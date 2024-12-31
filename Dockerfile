@@ -12,7 +12,9 @@ RUN pip install poetry && \
     poetry install --no-dev --no-interaction --no-ansi
 
 # Копируем все файлы проекта
-COPY . /app
+COPY todocore /app
+
+ENV PYTHONPATH "${PYTHONPATH}:/app/"
 
 # Копируем и настраиваем entrypoint
 COPY entrypoint.sh /entrypoint.sh
@@ -25,4 +27,3 @@ EXPOSE 8000
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Команда по умолчанию
-CMD ["python", "todocore/manage.py", "runserver", "0.0.0.0:8000"]
