@@ -1,7 +1,7 @@
 from common.pagination import StandardResultsSetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, viewsets
-from task.api.v1.serializers import TaskPartialUpdateSerializer, TaskSerializer
+from task.api.serializers import TaskPartialUpdateSerializer, TaskSerializer
 from task.models import Task
 
 from .filters import TaskFilter
