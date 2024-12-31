@@ -16,6 +16,8 @@ drf-yasg = "^1.21.8"
 celery = "^5.4.0"
 python-decouple = "^3.8"
 drf-nested-routers = "^0.94.1"
+django-filter = "^24.3"
+drf-spectacular = "^0.28.0"
 
 
 [build-system]

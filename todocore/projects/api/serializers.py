@@ -1,4 +1,3 @@
-from common.models import Position
 from django.core.exceptions import ValidationError
 from projects.models import Project, ProjectUser
 from rest_framework import serializers
@@ -17,14 +16,6 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         project = Project.objects.create(**validated_data)
         return project
 
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-
-        return instance
-
 
 class ProjectPartialUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,21 +31,7 @@ class ProjectPartialUpdateSerializer(serializers.ModelSerializer):
 class ProjectUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectUser
-        fields = ["id", "project", "user", "position", "role"]
-
-    def validate(self, data):
-        position = data.get("position")
-        if position and not Position.objects.filter(id=position.id).exists():
-            raise ValidationError({"position": "Position does not exist."})
-
-        role = data.get("role", "Reader")
-        valid_roles = [role[0] for role in ProjectUser.ROLE_CHOICES]
-        if role not in valid_roles:
-            raise ValidationError(
-                {"role": f"Invalid role. Allowed roles are: {', '.join(valid_roles)}"}
-            )
-
-        return data
+        fields = ["id", "user", "position", "role"]
 
     def create(self, validated_data):
         project = self.context["project"]
@@ -74,15 +51,6 @@ class ProjectUserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectUser
         fields = ["user", "role"]
-
-    def validate(self, data):
-        new_role = data.get("role")
-        valid_roles = [role[0] for role in ProjectUser.ROLE_CHOICES]
-        if new_role not in valid_roles:
-            raise ValidationError(
-                {"role": f"Invalid role. Allowed roles are: {', '.join(valid_roles)}"}
-            )
-        return data
 
     def update(self, instance, validated_data):
         new_role = validated_data.get("role")

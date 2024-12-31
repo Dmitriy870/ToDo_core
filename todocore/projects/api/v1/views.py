@@ -1,17 +1,17 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from projects.api.v1.filters import ProjectFilter
-from projects.models import Project, ProjectUser
-from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
-from .serializers import (
+from projects.api.serializers import (
     ProjectCreateUpdateSerializer,
     ProjectPartialUpdateSerializer,
     ProjectUserSerializer,
     ProjectUserUpdateSerializer,
 )
+from projects.api.v1.filters import ProjectFilter
+from projects.models import Project, ProjectUser
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 class ProjectViewSet(
@@ -50,19 +50,22 @@ class ProjectUserViewSet(
     def get_serializer_context(self):
         context = super().get_serializer_context()
         project_pk = self.kwargs.get("project_pk")
-        project = Project.objects.filter(id=project_pk).first()
-        if not project:
-            raise ObjectDoesNotExist("Project not found")
+        project = get_object_or_404(Project, id=project_pk)
         context["project"] = project
         return context
 
     def get_object(self):
         project_pk = self.kwargs.get("project_pk")
-        user_id = self.kwargs.get("user_id")
+
+        # Получаем user_id из kwargs (для DELETE) или из request.data (для POST/PATCH)
+        user_id = (
+            self.kwargs.get("user_id")
+            or self.request.data.get("user")
+            or self.request.data.get("user_id")
+        )
+
         if not user_id:
-            user_id = self.request.data.get("user")
-        if not user_id:
-            raise ValidationError({"user_id": "This field is required."})
+            raise ValidationError({"user": "User ID is required."})
 
         try:
             return ProjectUser.objects.get(project__id=project_pk, user__id=user_id)
