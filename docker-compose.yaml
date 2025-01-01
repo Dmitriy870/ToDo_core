@@ -62,24 +62,32 @@ services:
 #      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
     env_file:
       - .env
-
     networks:
       - core_network
+
+  celery_flower:
+    image: mher/flower
+    container_name: celery_flower
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    networks:
+      - core_network
+
 
   celery:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: core_celery
-    command: celery -A todocore worker --loglevel=info
     depends_on:
       - db
-      - redis
       - kafka
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      REDIS_URL: ${REDIS_URL}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      - redis
+    env_file:
+      - .env
+    entrypoint: ["/entrypoint_celery.sh"]
     networks:
       - core_network
 
@@ -88,17 +96,16 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: core_celery_beat
-    command: celery -A todocore beat --loglevel=info
     depends_on:
       - db
       - redis
       - kafka
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      REDIS_URL: ${REDIS_URL}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    env_file:
+      - .env
+    entrypoint: ["/entrypoint_celery.sh"]
     networks:
       - core_network
+
 
 networks:
   core_network:
