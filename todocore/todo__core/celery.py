@@ -13,11 +13,10 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks()
 
-# Периодические задачи (Celery Beat)
+
 app.conf.beat_schedule = {
-    # Пример периодической задачи (если нужно)
     "example-periodic-task": {
-        "task": "task.api.tasks.send_deadline_notification",  # Путь к задаче
-        "schedule": timedelta(minutes=30),  # Запускать каждые 30 минут
+        "task": "task.api.tasks.check_services",
+        "schedule": timedelta(minutes=15),
     },
 }

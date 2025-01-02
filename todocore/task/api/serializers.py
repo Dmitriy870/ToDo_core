@@ -10,7 +10,7 @@ from rest_framework import serializers
 from task.api.tasks import send_deadline_notification
 from task.models import Task
 
-redis_host = os.getenv("REDIS_HOST", "localhost")
+redis_host = os.getenv("REDIS_HOST")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 redis_db = int(os.getenv("REDIS_DB", 0))
 
@@ -82,6 +82,10 @@ class TaskSerializer(serializers.ModelSerializer, TaskSerializerMixin, CeleryTas
             project = data.get("project")
             assignee = data.get("assignee")
 
+            deadline = data.get("deadline")
+            if deadline < timezone.now():
+                raise serializers.ValidationError({"deadline": "Deadline must be in the future."})
+
             if Task.objects.filter(title=title, project=project, assignee=assignee).exists():
                 raise serializers.ValidationError(
                     {"error": "Task with the same title, project, and assignee already exists."}
@@ -89,6 +93,7 @@ class TaskSerializer(serializers.ModelSerializer, TaskSerializerMixin, CeleryTas
         return self.validate_assignee_and_project(data)
 
     def create(self, validated_data):
+
         task = Task.objects.create(**validated_data)
         notification_time = task.deadline - timezone.timedelta(hours=1)
         self.schedule_task(send_deadline_notification, task.id, notification_time)
