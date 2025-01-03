@@ -1,53 +1,11 @@
-import os
-
-from celery.result import AsyncResult
+from common.mixins import CeleryTaskMixin
 from common.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from projects.models import Project, ProjectUser
-from redis import Redis
 from rest_framework import serializers
 from task.api.tasks import send_deadline_notification
 from task.models import Task
-
-redis_host = os.getenv("REDIS_HOST")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-redis_db = int(os.getenv("REDIS_DB", 0))
-
-
-class CeleryTaskMixin:
-    """
-    Mixin for managing Celery tasks.
-    """
-
-    redis_client = Redis(host=redis_host, port=redis_port, db=redis_db)
-
-    def schedule_task(self, task, task_id, eta):
-        """
-        Schedule a Celery task and save its ID in Redis.
-        """
-        task_result = task.apply_async(args=[task_id], eta=eta)
-        self.redis_client.set(f"task: {task_id}", task_result.id)
-        return task_result
-
-    def revoke_task(self, task_id):
-        """
-        Revoke a Celery task and delete its ID from Redis.
-        """
-        stored_task_id = self.redis_client.get(f"task : {task_id}")
-        if stored_task_id:
-            AsyncResult(stored_task_id.decode()).revoke()
-            self.redis_client.delete(f"task: {task_id}")
-
-    def reschedule_task(self, task, task_id, old_deadline, new_deadline):
-        """
-        Revoke the old task and schedule a new one if the deadline has changed.
-        """
-        if old_deadline != new_deadline:
-            notification_time = new_deadline - timezone.timedelta(hours=1)
-            self.revoke_task(task_id)
-            return self.schedule_task(task, task_id, notification_time)
-        return None
 
 
 class TaskSerializerMixin:
@@ -71,7 +29,7 @@ class TaskSerializerMixin:
         return data
 
 
-class TaskSerializer(serializers.ModelSerializer, TaskSerializerMixin, CeleryTaskMixin):
+class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
@@ -112,7 +70,9 @@ class TaskSerializer(serializers.ModelSerializer, TaskSerializerMixin, CeleryTas
         instance.delete()
 
 
-class TaskPartialUpdateSerializer(serializers.ModelSerializer, TaskSerializerMixin):
+class TaskPartialUpdateSerializer(
+    TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSerializer
+):
     class Meta:
         model = Task
         exclude = ["created_by", "created_at"]
@@ -129,3 +89,14 @@ class TaskPartialUpdateSerializer(serializers.ModelSerializer, TaskSerializerMix
         if "project" not in data:
             data.pop("project", None)
         return self.validate_assignee_and_project(data)
+
+    def update(self, instance, validated_data):
+        old_deadline = instance.deadline
+        instance = super().update(instance, validated_data)
+
+        if "deadline" in validated_data and old_deadline != instance.deadline:
+            self.reschedule_task(
+                send_deadline_notification, instance.id, old_deadline, instance.deadline
+            )
+
+        return instance

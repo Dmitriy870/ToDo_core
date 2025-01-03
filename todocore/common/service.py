@@ -1,77 +1,81 @@
-import os
+import logging
+from smtplib import SMTPException
 
-from aiokafka import AIOKafkaConsumer
+import aiohttp
+import aiokafka
+from common.config import config
 from django.core.mail import send_mail
-from dotenv import load_dotenv
 from redis import Redis
-from requests import post
 
-# Загрузите переменные из .env
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 
-def send_notification():
+def send_notification(task_info):
     try:
         user_email = "rbinans@gmail.com"
         subject = "Дедлайн задачи"
-        message = "Дедлайн задачи наступит через час."
+        message = f"""
+        Дедлайн задачи наступит через час.
 
-        # Отправка письма
+Информация о задаче:
+        - Название: {task_info.title}
+        - Описание: {task_info.description}
+        - Дедлайн: {task_info.deadline}
+        - Ответственный: {task_info.assignee}"""
+
         send_mail(
             subject,
             message,
-            os.getenv("DEFAULT_FROM_EMAIL"),
+            config.email.default_email,
             [user_email],
             fail_silently=False,
         )
+        logger.info(f"Notification sent to {user_email}.")
+    except SMTPException as e:
+        logger.error(f"Error sending notification: {e}", exc_info=True)
 
-        print(f"Уведомление отправлено на {user_email}.")
-    except Exception as e:
-        print(f"Ошибка при отправке уведомления: {e}")
 
-
-def send_tg_alert(message):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+async def send_tg_alert(message):
+    bot_token = config.telegram.token
+    chat_id = config.telegram.chat_id
     url = f"https: //api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message}
-    response = post(url, json=payload)
-    if response.status_code == 200:
-        print("Сообщение успешно отправлено!")
-    else:
-        print(f"Ошибка: {response.status_code}, {response.json()}")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload) as response:
+                if response.status == 200:
+                    logger.info("Message sent successfully!")
+                else:
+                    logger.error(f"Error: {response.status}, {await response.json()}")
+    except aiohttp.ClientError as e:
+        logger.error(f"Error sending Telegram message: {e}", exc_info=True)
 
 
 def check_redis_availability():
-    """
-    Check if Redis is available.
-    """
     try:
         client = Redis(
-            host=os.getenv("REDIS_HOST"),
-            port=int(os.getenv("REDIS_PORT")),
-            db=int(os.getenv("REDIS_DB")),  #
+            host=config.redis.host,
+            port=config.redis.port,
+            db=config.redis.db,
             socket_connect_timeout=3,
         )
         client.ping()
         return True
-    except Exception as e:
-        print(f"Redis is down: {e}")
+    except ConnectionError as e:
+        logger.error(f"Redis is unavailable: {e}", exc_info=True)
         return False
 
 
 async def check_kafka_availability():
-    """
-    Check if Kafka is available using aiokafka.
-    """
     try:
-        consumer = AIOKafkaConsumer(
-            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
-            request_timeout_ms=3000,  #
+        consumer = aiokafka.AIOKafkaConsumer(
+            bootstrap_servers=config.kafka.bootstrap_servers,
+            request_timeout_ms=3000,
         )
         await consumer.start()
         await consumer.stop()
         return True
-    except Exception as e:
-        print(f"Kafka is down: {e}")
+    except aiokafka.errors.KafkaError as e:
+        logger.error(f"Kafka is unavailable: {e}", exc_info=True)
         return False

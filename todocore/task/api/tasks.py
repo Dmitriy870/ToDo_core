@@ -16,7 +16,7 @@ def send_deadline_notification(task_id):
     Celery task to send deadline notification.
     """
     task = Task.objects.get(id=task_id)
-    send_notification()
+    send_notification(task)
     task.completed = True
     task.save()
 
