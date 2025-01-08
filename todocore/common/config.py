@@ -21,7 +21,7 @@ class KafkaConfig:
 
 @dataclass
 class TelegramConfig:
-    token: str = os.getenv("TELEGRAM_TOKEN")
+    token: str = os.getenv("TELEGRAM_TOKEN", "7734496041:AAEMj0n5jq_uFdgrJARH0g4iyTjMsHXfWxc")
     chat_id: int = int(os.getenv("TELEGRAM_CHAT_ID"))
 
 
@@ -36,6 +36,3 @@ class AppConfig:
     kafka: KafkaConfig = field(default_factory=KafkaConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     email: EmailConfig = field(default_factory=EmailConfig)
-
-
-config = AppConfig()

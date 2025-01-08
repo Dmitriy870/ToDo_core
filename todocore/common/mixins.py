@@ -1,7 +1,12 @@
 from celery.result import AsyncResult
-from common.config import config
+from common.config import AppConfig
+from common.containers.client import ClientContainer
+from dependency_injector.wiring import Provide
 from django.utils import timezone
 from redis import Redis
+from task.models import TaskTypeCelery
+
+config = AppConfig()
 
 
 class CeleryTaskMixin:
@@ -9,34 +14,50 @@ class CeleryTaskMixin:
     Mixin for managing Celery tasks.
     """
 
-    redis_host = config.redis.host
-    redis_port = config.redis.port
-    redis_db = config.redis.db
-    redis_client = Redis(host=redis_host, port=redis_port, db=redis_db)
-
-    def schedule_task(self, task, task_id, eta) -> AsyncResult:
+    def schedule_task(
+        self,
+        task,
+        task_id,
+        eta,
+        task_type: TaskTypeCelery = TaskTypeCelery.SEND_MAIL,
+        redis_client: Redis = Provide[ClientContainer.redis_client],
+    ) -> AsyncResult:
         """
-        Schedule a Celery task and save its ID in Redis.
+        Schedule a Celery task and save its ID in Redis with task type.
         """
         task_result = task.apply_async(args=[task_id], eta=eta)
-        self.redis_client.set(f"task: {task_id}", task_result.id)
+        redis_key = f"task: {task_type.value}: {task_id}"
+        redis_client.set(redis_key, task_result.id)
         return task_result
 
-    def revoke_task(self, task_id) -> None:
+    def revoke_task(
+        self,
+        task_id,
+        task_type: TaskTypeCelery = TaskTypeCelery.SEND_MAIL,
+        redis_client: Redis = Provide[ClientContainer.redis_client],
+    ) -> None:
         """
         Revoke a Celery task and delete its ID from Redis.
         """
-        stored_task_id = self.redis_client.get(f"task : {task_id}")
+        redis_key = f"task: {task_type.value}: {task_id}"
+        stored_task_id = redis_client.get(redis_key)
         if stored_task_id:
             AsyncResult(stored_task_id.decode()).revoke()
-            self.redis_client.delete(f"task: {task_id}")
+            redis_client.delete(redis_key)
 
-    def reschedule_task(self, task, task_id, old_deadline, new_deadline) -> AsyncResult | None:
+    def reschedule_task(
+        self,
+        task,
+        task_id,
+        old_deadline,
+        new_deadline,
+        task_type: TaskTypeCelery = TaskTypeCelery.SEND_MAIL,
+    ) -> AsyncResult | None:
         """
         Revoke the old task and schedule a new one if the deadline has changed.
         """
         if old_deadline != new_deadline:
             notification_time = new_deadline - timezone.timedelta(hours=1)
-            self.revoke_task(task_id)
-            return self.schedule_task(task, task_id, notification_time)
+            self.revoke_task(task_id, task_type)
+            return self.schedule_task(task, task_id, notification_time, task_type)
         return None

@@ -1,5 +1,12 @@
+from enum import Enum
+
 from common.models import Base
 from django.db import models
+
+
+class TaskTypeCelery(Enum):
+    SEND_MAIL = "send_mail"
+    OTHER_TYPE = "other_type"
 
 
 class Task(Base):
