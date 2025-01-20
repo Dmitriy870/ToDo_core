@@ -1,5 +1,12 @@
+from enum import Enum
+
 from common.models import Base
 from django.db import models
+
+
+class TaskTypeCelery(Enum):
+    SEND_MAIL = "send_mail"
+    OTHER_TYPE = "other_type"
 
 
 class Task(Base):
@@ -10,7 +17,7 @@ class Task(Base):
     assignee = models.ForeignKey(
         "common.User", on_delete=models.CASCADE, related_name="assigned_tasks"
     )
-    project = models.ForeignKey("projects.Project", on_delete=models.CASCADE, related_name="tasks")
+    project = models.ForeignKey("projects.Project", on_delete=models.CASCADE, related_name="task")
     created_by = models.ForeignKey(
         "common.User", on_delete=models.CASCADE, related_name="created_tasks"
     )
