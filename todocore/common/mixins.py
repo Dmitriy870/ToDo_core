@@ -1,12 +1,9 @@
 from celery.result import AsyncResult
-from common.config import AppConfig
 from common.containers.client import ClientContainer
 from dependency_injector.wiring import Provide
 from django.utils import timezone
 from redis import Redis
 from task.models import TaskTypeCelery
-
-config = AppConfig()
 
 
 class CeleryTaskMixin:

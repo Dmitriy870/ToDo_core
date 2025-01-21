@@ -2,11 +2,13 @@ import logging
 from smtplib import SMTPException
 
 import aiohttp
-from common.config import AppConfig
+from common.config import EmailConfig, RedisConfig, TelegramConfig
 from django.core.mail import send_mail
 from redis import Redis
 
-config = AppConfig()
+config_email = EmailConfig()
+config_tg = TelegramConfig()
+config_redis = RedisConfig()
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ def send_notification(task_info):
         send_mail(
             subject,
             message,
-            config.email.default_email,
+            config_email.default_email,
             [user_email],
             fail_silently=False,
         )
@@ -43,9 +45,9 @@ async def send_tg_alert(message):
     """
     Send a Telegram alert.
     """
-    bot_token = config.telegram.token
-    chat_id = config.telegram.chat_id
-    url = f"{config.telegram.url}bot{bot_token}/sendMessage"  # noqa
+    bot_token = config_tg.token
+    chat_id = config_tg.chat_id
+    url = f"{config_telegram.url}bot{bot_token}/sendMessage"  # noqa
     payload = {"chat_id": chat_id, "text": message}
 
     try:
@@ -65,9 +67,9 @@ def check_redis_availability():
     """
     try:
         client = Redis(
-            host=config.redis.host,
-            port=config.redis.port,
-            db=config.redis.db,
+            host=config_redis.host,
+            port=config_redis.port,
+            db=config_redis.db,
             socket_connect_timeout=3,
         )
         client.ping()

@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
@@ -34,12 +34,3 @@ class EmailConfig:
 @dataclass
 class AuthConfig:
     url: str = os.getenv("AUTH_SERVICE_URL")
-
-
-@dataclass
-class AppConfig:
-    redis: RedisConfig = field(default_factory=RedisConfig)
-    kafka: KafkaConfig = field(default_factory=KafkaConfig)
-    telegram: TelegramConfig = field(default_factory=TelegramConfig)
-    email: EmailConfig = field(default_factory=EmailConfig)
-    auth: AuthConfig = field(default_factory=AuthConfig)

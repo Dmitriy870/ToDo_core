@@ -1,13 +1,13 @@
 import logging
 
 import requests
-from common.config import AppConfig
+from common.config import AuthConfig
 from common.models import User
 from django.db import IntegrityError
 from django.http import JsonResponse
 from rest_framework.status import HTTP_401_UNAUTHORIZED
 
-config = AppConfig()
+config = AuthConfig()
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +36,7 @@ def token_required(get_response):
         logger.info(f"Token is {token}")
 
         response = requests.get(
-            f"{config.auth.url}/users/me", headers={"Authorization": f"Bearer {token}"}
+            f"{config.url}/users/me", headers={"Authorization": f"Bearer {token}"}
         )
         if response.status_code != 200:
             return JsonResponse({"error": "Invalid or expired token"}, status=HTTP_401_UNAUTHORIZED)
