@@ -18,14 +18,14 @@ def send_notification(task_info):
     try:
         user_email = "rbinans@gmail.com"
         subject = "Дедлайн задачи"
-        message = f"""
+        message = f""" 
         Дедлайн задачи наступит через час.
 
         Информация о задаче
         - Название: {task_info.title}
         - Описание: {task_info.description}
         - Дедлайн: {task_info.deadline}
-        - Ответственный: {task_info.assignee}"""
+        - Ответственный: {task_info.assignee}"""  # noqa
 
         send_mail(
             subject,
@@ -45,7 +45,7 @@ async def send_tg_alert(message):
     """
     bot_token = config.telegram.token
     chat_id = config.telegram.chat_id
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    url = f"{config.telegram.url}bot{bot_token}/sendMessage"  # noqa
     payload = {"chat_id": chat_id, "text": message}
 
     try:

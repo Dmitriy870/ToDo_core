@@ -1,6 +1,6 @@
-from django.core.exceptions import ValidationError
 from projects.models import Project, ProjectUser
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 
 class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
@@ -10,8 +10,11 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         created_by = validated_data.get("created_by")
+        title = validated_data.get("title")
         if not created_by:
             raise ValidationError({"created_by": "This field is required."})
+        if Project.objects.filter(title=title, created_by=created_by).exists():
+            raise ValidationError({"user": f"Project with title {title} already exists."})
 
         project = Project.objects.create(**validated_data)
         return project

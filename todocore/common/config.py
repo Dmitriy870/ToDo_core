@@ -23,6 +23,7 @@ class KafkaConfig:
 class TelegramConfig:
     token: str = os.getenv("TELEGRAM_TOKEN", "7734496041:AAEMj0n5jq_uFdgrJARH0g4iyTjMsHXfWxc")
     chat_id: int = int(os.getenv("TELEGRAM_CHAT_ID"))
+    url: str = os.getenv("TELEGRAM_URL")
 
 
 @dataclass
@@ -31,8 +32,14 @@ class EmailConfig:
 
 
 @dataclass
+class AuthConfig:
+    url: str = os.getenv("AUTH_SERVICE_URL")
+
+
+@dataclass
 class AppConfig:
     redis: RedisConfig = field(default_factory=RedisConfig)
     kafka: KafkaConfig = field(default_factory=KafkaConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     email: EmailConfig = field(default_factory=EmailConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)

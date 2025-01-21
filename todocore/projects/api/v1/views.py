@@ -1,6 +1,8 @@
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from common.permissions import IsAdmin
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from projects.api.permissions import HasProjectRole, IsProjectOwner
 from projects.api.serializers import (
     ProjectCreateUpdateSerializer,
     ProjectPartialUpdateSerializer,
@@ -11,6 +13,7 @@ from projects.api.v1.filters import ProjectFilter
 from projects.models import Project, ProjectUser
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 
@@ -31,6 +34,15 @@ class ProjectViewSet(
         if self.action in ["update", "partial_update"]:
             return ProjectPartialUpdateSerializer
         return ProjectCreateUpdateSerializer
+
+    def get_permissions(self):
+        permission_map = {
+            "create": [IsAdmin()],
+            "update": [IsProjectOwner()],
+            "partial_update": [IsProjectOwner()],
+            "destroy": [IsAdmin()],
+        }
+        return permission_map.get(self.action, super().get_permissions())
 
 
 class ProjectUserViewSet(
@@ -57,7 +69,6 @@ class ProjectUserViewSet(
     def get_object(self):
         project_pk = self.kwargs.get("project_pk")
 
-        # Получаем user_id из kwargs (для DELETE) или из request.data (для POST/PATCH)
         user_id = (
             self.kwargs.get("user_id")
             or self.request.data.get("user")
@@ -71,6 +82,14 @@ class ProjectUserViewSet(
             return ProjectUser.objects.get(project__id=project_pk, user__id=user_id)
         except ProjectUser.DoesNotExist:
             raise ObjectDoesNotExist("ProjectUser not found")
+
+    def get_permissions(self):
+        permission_map = {
+            "add_user": [HasProjectRole(["Maintainer", "Owner"])],
+            "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
+            "delete_user": [IsProjectOwner()],
+        }
+        return permission_map.get(self.action, super().get_permissions())
 
     @action(detail=False, methods=["post"], url_path="project/(?P<project_pk>[^/.]+)/users")
     def add_user(self, request, *args, **kwargs):

@@ -13,6 +13,7 @@ class Base(models.Model):
 
 
 class User(Base):
+    auth_user_id = models.UUIDField(unique=True, null=True, blank=True)
 
     class Meta:
         db_table = "user"
