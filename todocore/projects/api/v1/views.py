@@ -1,3 +1,5 @@
+from common.event import EventManager, EventName
+from common.kafka_producers import KafkaTopic
 from common.permissions import IsAdmin
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
@@ -43,6 +45,38 @@ class ProjectViewSet(
             "destroy": [IsAdmin()],
         }
         return permission_map.get(self.action, super().get_permissions())
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        instance = self.get_object()
+        EventManager.send_event(
+            model_type="Project",
+            event_name=f"{EventName.GET.value}project",
+            entity_id=str(instance.id),
+            model_data=response.data,
+            topic=KafkaTopic.EVENTS_TOPIC.value,
+        )
+        return response
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+
+        EventManager.send_event(
+            event_name=f"{EventName.GET_ALL.value}projects",
+            model_type="Project",
+            topic=KafkaTopic.MODELS_TOPIC.value,
+        )
+        return response
+
+    def perform_destroy(self, instance):
+
+        EventManager.send_event(
+            event_name=f"{EventName.DELETE.value}project",
+            model_type="Project",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC.value,
+        )
+        instance.delete()
 
 
 class ProjectUserViewSet(
@@ -90,6 +124,16 @@ class ProjectUserViewSet(
             "delete_user": [IsProjectOwner()],
         }
         return permission_map.get(self.action, super().get_permissions())
+
+    def perform_destroy(self, instance):
+
+        EventManager.send_event(
+            event_name=f"{EventName.DELETE_FROM_PROJECT.value}",
+            model_type="ProjectUser",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.EVENTS_TOPIC.value,
+        )
+        instance.delete()
 
     @action(detail=False, methods=["post"], url_path="project/(?P<project_pk>[^/.]+)/users")
     def add_user(self, request, *args, **kwargs):
