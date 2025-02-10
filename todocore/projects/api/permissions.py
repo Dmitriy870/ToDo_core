@@ -11,7 +11,6 @@ class ProjectRolePermission(BasePermission):
 
     def has_permission(self, request, view):
         if getattr(request, "role", None) == "admin":
-            logger.info("Admin access granted (has_permission)")
             return True
 
         project_pk = view.kwargs.get("project_pk") or view.kwargs.get("id")
@@ -27,12 +26,13 @@ class ProjectRolePermission(BasePermission):
             )
             return project_user.role in self.allowed_roles
         except ProjectUser.DoesNotExist:
-            logger.info("User is not associated with this project")
+            logger.info(
+                f"User {request.user_id} tried to request the project, but does not have access"
+            )
             return False
 
     def has_object_permission(self, request, view, obj):
         if getattr(request, "role", None) == "admin":
-            logger.info("Admin access granted (has_object_permission)")
             return True
 
         if isinstance(obj, Project):
@@ -41,7 +41,7 @@ class ProjectRolePermission(BasePermission):
             project_id = getattr(obj, "project_id", None)
 
         if not project_id:
-            logger.info("Object has no project reference")
+            logger.info(f"User {request.user_id} has no project reference")
             return False
 
         try:

@@ -2,18 +2,20 @@ import logging
 from smtplib import SMTPException
 
 import aiohttp
-from common.config import EmailConfig, RedisConfig, TelegramConfig
+from common.config import EmailConfig, TelegramConfig
+from common.containers.client import ClientContainer
+from common.containers.configs import EmailConfigContainer, TgConfigContainer
+from dependency_injector.wiring import Provide, inject
 from django.core.mail import send_mail
 from redis import Redis
-
-config_email = EmailConfig()
-config_tg = TelegramConfig()
-config_redis = RedisConfig()
 
 logger = logging.getLogger(__name__)
 
 
-def send_notification(task_info):
+@inject
+def send_notification(
+    task_info, config_email: EmailConfig = Provide[EmailConfigContainer.email_config]
+):
     """
     Send an email notification about the task deadline.
     """
@@ -41,13 +43,14 @@ def send_notification(task_info):
         logger.error(f"Error sending notification: {e}", exc_info=True)
 
 
-async def send_tg_alert(message):
+@inject
+async def send_tg_alert(message, config_tg: TelegramConfig = Provide[TgConfigContainer.tg_config]):
     """
     Send a Telegram alert.
     """
     bot_token = config_tg.token
     chat_id = config_tg.chat_id
-    url = f"{config_telegram.url}bot{bot_token}/sendMessage"  # noqa
+    url = f"{config_tg.url}bot{bot_token}/sendMessage"  # noqa
     payload = {"chat_id": chat_id, "text": message}
 
     try:
@@ -61,18 +64,13 @@ async def send_tg_alert(message):
         logger.error(f"Error sending Telegram message: {e}", exc_info=True)
 
 
-def check_redis_availability():
+@inject
+def check_redis_availability(redis_client: Redis = Provide[ClientContainer.redis_client]):
     """
     Check if Redis is available.
     """
     try:
-        client = Redis(
-            host=config_redis.host,
-            port=config_redis.port,
-            db=config_redis.db,
-            socket_connect_timeout=3,
-        )
-        client.ping()
+        redis_client.ping()
         return True
     except ConnectionError as e:
         logger.error(f"Redis is unavailable: {e}", exc_info=True)
