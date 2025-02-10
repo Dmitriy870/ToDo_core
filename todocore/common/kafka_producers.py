@@ -25,7 +25,7 @@ def produce_message(topic: str, data: dict):
     try:
         serialized_value = json.dumps(data, cls=CustomJSONEncoder)
 
-        producer.produce(topic=topic, key="MESSAGE_KEY", value=serialized_value)
+        producer.produce(topic=topic, value=serialized_value)
         producer.flush()
 
         logger.info(f"Sent message to topic '{topic}': {data}")
