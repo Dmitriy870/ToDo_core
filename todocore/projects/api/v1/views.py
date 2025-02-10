@@ -1,6 +1,9 @@
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from common.permissions import IsAdmin
+from common.utils import DynamicPermissionMixin, PermissionClass
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from projects.api.permissions import HasProjectRole, IsProjectOwner
 from projects.api.serializers import (
     ProjectCreateUpdateSerializer,
     ProjectPartialUpdateSerializer,
@@ -11,6 +14,7 @@ from projects.api.v1.filters import ProjectFilter
 from projects.models import Project, ProjectUser
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 
@@ -20,6 +24,7 @@ class ProjectViewSet(
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
+    DynamicPermissionMixin,
     viewsets.GenericViewSet,
 ):
     queryset = Project.objects.all()
@@ -32,12 +37,20 @@ class ProjectViewSet(
             return ProjectPartialUpdateSerializer
         return ProjectCreateUpdateSerializer
 
+    permission_map: dict[str, list[PermissionClass]] = {
+        "create": [IsAdmin()],
+        "update": [IsProjectOwner()],
+        "partial_update": [IsProjectOwner()],
+        "destroy": [IsAdmin()],
+    }
+
 
 class ProjectUserViewSet(
     mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
+    DynamicPermissionMixin,
     viewsets.GenericViewSet,
 ):
     queryset = ProjectUser.objects.all()
@@ -57,7 +70,6 @@ class ProjectUserViewSet(
     def get_object(self):
         project_pk = self.kwargs.get("project_pk")
 
-        # Получаем user_id из kwargs (для DELETE) или из request.data (для POST/PATCH)
         user_id = (
             self.kwargs.get("user_id")
             or self.request.data.get("user")
@@ -71,6 +83,12 @@ class ProjectUserViewSet(
             return ProjectUser.objects.get(project__id=project_pk, user__id=user_id)
         except ProjectUser.DoesNotExist:
             raise ObjectDoesNotExist("ProjectUser not found")
+
+    permission_map: dict[str, list[PermissionClass]] = {
+        "add_user": [HasProjectRole(["Maintainer", "Owner"])],
+        "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
+        "delete_user": [IsProjectOwner()],
+    }
 
     @action(detail=False, methods=["post"], url_path="project/(?P<project_pk>[^/.]+)/users")
     def add_user(self, request, *args, **kwargs):
