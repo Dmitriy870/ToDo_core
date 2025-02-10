@@ -1,4 +1,5 @@
 from common.permissions import IsAdmin
+from common.utils import DynamicPermissionMixin, PermissionClass
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
@@ -23,6 +24,7 @@ class ProjectViewSet(
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
+    DynamicPermissionMixin,
     viewsets.GenericViewSet,
 ):
     queryset = Project.objects.all()
@@ -35,14 +37,12 @@ class ProjectViewSet(
             return ProjectPartialUpdateSerializer
         return ProjectCreateUpdateSerializer
 
-    def get_permissions(self):
-        permission_map = {
-            "create": [IsAdmin()],
-            "update": [IsProjectOwner()],
-            "partial_update": [IsProjectOwner()],
-            "destroy": [IsAdmin()],
-        }
-        return permission_map.get(self.action, super().get_permissions())
+    permission_map: dict[str, list[PermissionClass]] = {
+        "create": [IsAdmin()],
+        "update": [IsProjectOwner()],
+        "partial_update": [IsProjectOwner()],
+        "destroy": [IsAdmin()],
+    }
 
 
 class ProjectUserViewSet(
@@ -50,6 +50,7 @@ class ProjectUserViewSet(
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
+    DynamicPermissionMixin,
     viewsets.GenericViewSet,
 ):
     queryset = ProjectUser.objects.all()
@@ -83,13 +84,11 @@ class ProjectUserViewSet(
         except ProjectUser.DoesNotExist:
             raise ObjectDoesNotExist("ProjectUser not found")
 
-    def get_permissions(self):
-        permission_map = {
-            "add_user": [HasProjectRole(["Maintainer", "Owner"])],
-            "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
-            "delete_user": [IsProjectOwner()],
-        }
-        return permission_map.get(self.action, super().get_permissions())
+    permission_map: dict[str, list[PermissionClass]] = {
+        "add_user": [HasProjectRole(["Maintainer", "Owner"])],
+        "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
+        "delete_user": [IsProjectOwner()],
+    }
 
     @action(detail=False, methods=["post"], url_path="project/(?P<project_pk>[^/.]+)/users")
     def add_user(self, request, *args, **kwargs):

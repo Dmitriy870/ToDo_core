@@ -11,7 +11,6 @@ class TaskRolePermission(BasePermission):
 
     def has_permission(self, request, view):
         if getattr(request, "role", None) == "admin":
-            logger.info("Admin access granted (has_permission)")
             return True
 
         if view.action == "list":
@@ -34,7 +33,7 @@ class TaskRolePermission(BasePermission):
                 )
                 return project_user.role in self.allowed_roles
             except ProjectUser.DoesNotExist:
-                logger.info("User is not associated with this project (create)")
+                logger.info(f"User {request.user.id} is not associated with this project (create)")
                 return False
 
         logger.info("has_permission default pass")
@@ -42,7 +41,6 @@ class TaskRolePermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         if getattr(request, "role", None) == "admin":
-            logger.info("Admin access granted (has_object_permission)")
             return True
 
         try:
@@ -52,7 +50,7 @@ class TaskRolePermission(BasePermission):
                 logger.info(f"Access granted for role: {project_user.role}")
                 return True
         except ProjectUser.DoesNotExist:
-            logger.info("User is not associated with the project")
+            logger.info(f"User {request.user_id} is not associated with the project")
 
         return False
 

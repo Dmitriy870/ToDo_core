@@ -2,12 +2,13 @@ import logging
 
 import requests
 from common.config import AuthConfig
+from common.containers.configs import AuthConfigContainer
 from common.models import User
+from dependency_injector.wiring import Provide, inject
 from django.db import IntegrityError
 from django.http import JsonResponse
 from rest_framework.status import HTTP_401_UNAUTHORIZED
 
-config = AuthConfig()
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +20,8 @@ def sync_user(auth_user_id):
         return None
 
 
-def token_required(get_response):
+@inject
+def token_required(get_response, config: AuthConfig = Provide[AuthConfigContainer.auth_config]):
     def middleware(request):
         if not request.path.startswith("/api/"):
             return get_response(request)
@@ -32,8 +34,6 @@ def token_required(get_response):
             )
 
         token = auth_header.split(" ")[1]
-
-        logger.info(f"Token is {token}")
 
         response = requests.get(
             f"{config.url}/users/me", headers={"Authorization": f"Bearer {token}"}
@@ -51,7 +51,6 @@ def token_required(get_response):
         request.user_id = user.id
         request.auth_user_id = auth_user_id
         request.role = role
-        logger.info(f"User ID: {request.user_id}, Role: {role} (middleware)")
 
         return get_response(request)
 
