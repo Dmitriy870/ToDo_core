@@ -59,11 +59,12 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         self.schedule_task(send_deadline_notification, task.id, notification_time)
         serialized_data = self.to_representation(task)
         EventManager.send_event(
-            event_name=f"{EventName.CREATE.value}task",
+            event_name=f"{EventName.CREATE}task",
             model_type="Task",
             model_data=serialized_data,
+            event_type="MODEL",
             entity_id=str(task.id),
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            topic=KafkaTopic.MODELS_TOPIC,
         )
         return task
 
@@ -75,21 +76,23 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         )
         serialized_data = self.to_representation(instance)
         EventManager.send_event(
-            event_name=f"{EventName.UPDATE.value}task",
+            event_name=f"{EventName.UPDATE}task",
             model_type="Task",
             model_data=serialized_data,
+            event_type="MODEL",
             entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            topic=KafkaTopic.MODELS_TOPIC,
         )
         return instance
 
     def delete(self, instance):
         self.revoke_task(instance.id)
         EventManager.send_event(
-            event_name=f"{EventName.DELETE.value}task",
+            event_name=f"{EventName.DELETE}task",
             model_type="Task",
+            event_type="MODEL",
             entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            topic=KafkaTopic.MODELS_TOPIC,
         )
         instance.delete()
 
@@ -125,11 +128,12 @@ class TaskPartialUpdateSerializer(
 
         serialized_data = self.to_representation(instance)
         EventManager.send_event(
-            event_name=f"{EventName.UPDATE.value}task",
+            event_name=f"{EventName.UPDATE}task",
             model_type="Task",
             model_data=serialized_data,
+            event_type="MODEL",
             entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            topic=KafkaTopic.MODELS_TOPIC,
         )
 
         return instance

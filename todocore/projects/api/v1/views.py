@@ -51,10 +51,11 @@ class ProjectViewSet(
         instance = self.get_object()
         EventManager.send_event(
             model_type="Project",
-            event_name=f"{EventName.GET.value}project",
+            event_name=f"{EventName.GET}project",
+            event_type="MODEL",
             entity_id=str(instance.id),
             model_data=response.data,
-            topic=KafkaTopic.EVENTS_TOPIC.value,
+            topic=KafkaTopic.EVENTS_TOPIC,
         )
         return response
 
@@ -62,19 +63,21 @@ class ProjectViewSet(
         response = super().list(request, *args, **kwargs)
 
         EventManager.send_event(
-            event_name=f"{EventName.GET_ALL.value}projects",
+            event_name=f"{EventName.GET_ALL}projects",
             model_type="Project",
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            event_type="MODEL",
+            topic=KafkaTopic.MODELS_TOPIC,
         )
         return response
 
     def perform_destroy(self, instance):
 
         EventManager.send_event(
-            event_name=f"{EventName.DELETE.value}project",
+            event_name=f"{EventName.DELETE}project",
             model_type="Project",
+            event_type="MODEL",
             entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC.value,
+            topic=KafkaTopic.MODELS_TOPIC,
         )
         instance.delete()
 
@@ -127,10 +130,11 @@ class ProjectUserViewSet(
     def perform_destroy(self, instance):
 
         EventManager.send_event(
-            event_name=f"{EventName.DELETE_FROM_PROJECT.value}",
+            event_name=f"{EventName.DELETE_FROM_PROJECT}",
             model_type="ProjectUser",
+            event_type="EVENT",
             entity_id=str(instance.id),
-            topic=KafkaTopic.EVENTS_TOPIC.value,
+            topic=KafkaTopic.EVENTS_TOPIC,
         )
         instance.delete()
 
