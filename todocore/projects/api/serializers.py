@@ -1,3 +1,5 @@
+from common.event import EventManager, EventName
+from common.kafka_producers import KafkaTopic
 from projects.models import Project, ProjectUser
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -17,6 +19,18 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
             raise ValidationError({"user": f"Project with title {title} already exists."})
 
         project = Project.objects.create(**validated_data)
+
+        serialized_data = self.to_representation(project)
+
+        EventManager.send_event(
+            event_name=f"{EventName.CREATE}project",
+            event_type="MODEL",
+            model_type="Project",
+            model_data=serialized_data,
+            entity_id=str(project.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
+
         return project
 
 
@@ -29,6 +43,21 @@ class ProjectPartialUpdateSerializer(serializers.ModelSerializer):
             "description": {"required": False},
             "status": {"required": False},
         }
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+
+        serialized_data = self.to_representation(instance)
+        EventManager.send_event(
+            event_name=f"{EventName.UPDATE}project",
+            model_type="Project",
+            event_type="MODEL",
+            model_data=serialized_data,
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
+
+        return instance
 
 
 class ProjectUserSerializer(serializers.ModelSerializer):
@@ -47,7 +76,22 @@ class ProjectUserSerializer(serializers.ModelSerializer):
                 {"user": f"User with id {user.id} already exists with the same position"}
             )
 
-        return ProjectUser.objects.create(project=project, user=user, position=position, role=role)
+        instance = ProjectUser.objects.create(
+            project=project, user=user, position=position, role=role
+        )
+
+        serialized_data = self.to_representation(instance)
+
+        EventManager.send_event(
+            event_name=f"{EventName.ADD_ON_PROJECT}",
+            model_type="ProjectUser",
+            event_type="EVENT",
+            model_data=serialized_data,
+            entity_id=str(instance.id),
+            topic=KafkaTopic.EVENTS_TOPIC,
+        )
+
+        return instance
 
 
 class ProjectUserUpdateSerializer(serializers.ModelSerializer):
@@ -59,4 +103,13 @@ class ProjectUserUpdateSerializer(serializers.ModelSerializer):
         new_role = validated_data.get("role")
         instance.role = new_role
         instance.save()
+
+        EventManager.send_event(
+            event_name=f"{EventName.CHANGE_ROLE_ON_PROJECT}",
+            model_type="ProjectUser",
+            event_type="EVENT",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.EVENTS_TOPIC,
+        )
+
         return instance

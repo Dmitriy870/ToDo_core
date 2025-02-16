@@ -1,3 +1,5 @@
+from common.event import EventManager, EventName
+from common.kafka_producers import KafkaTopic
 from common.mixins import CeleryTaskMixin
 from common.models import User
 from django.core.exceptions import ValidationError
@@ -55,6 +57,15 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         task = Task.objects.create(**validated_data)
         notification_time = task.deadline - timezone.timedelta(hours=1)
         self.schedule_task(send_deadline_notification, task.id, notification_time)
+        serialized_data = self.to_representation(task)
+        EventManager.send_event(
+            event_name=f"{EventName.CREATE}task",
+            model_type="Task",
+            model_data=serialized_data,
+            event_type="MODEL",
+            entity_id=str(task.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
         return task
 
     def update(self, instance, validated_data):
@@ -63,10 +74,26 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         self.reschedule_task(
             send_deadline_notification, instance.id, old_deadline, instance.deadline
         )
+        serialized_data = self.to_representation(instance)
+        EventManager.send_event(
+            event_name=f"{EventName.UPDATE}task",
+            model_type="Task",
+            model_data=serialized_data,
+            event_type="MODEL",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
         return instance
 
     def delete(self, instance):
         self.revoke_task(instance.id)
+        EventManager.send_event(
+            event_name=f"{EventName.DELETE}task",
+            model_type="Task",
+            event_type="MODEL",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
         instance.delete()
 
 
@@ -98,5 +125,15 @@ class TaskPartialUpdateSerializer(
             self.reschedule_task(
                 send_deadline_notification, instance.id, old_deadline, instance.deadline
             )
+
+        serialized_data = self.to_representation(instance)
+        EventManager.send_event(
+            event_name=f"{EventName.UPDATE}task",
+            model_type="Task",
+            model_data=serialized_data,
+            event_type="MODEL",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
 
         return instance
