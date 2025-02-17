@@ -26,6 +26,8 @@ aiohttp = "^3.11.11"
 flake8 = "^7.1.1"
 asgiref = "^3.8.1"
 dependency-injector = "^4.45.0"
+httpx = "^0.28.1"
+pillow = "^11.1.0"
 
 
 [build-system]

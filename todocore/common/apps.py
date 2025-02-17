@@ -3,6 +3,7 @@ import logging
 from common.containers.client import ClientContainer
 from common.containers.configs import (
     AuthConfigContainer,
+    CommonConfigContainer,
     EmailConfigContainer,
     TgConfigContainer,
 )
@@ -28,6 +29,7 @@ class CommonConfig(AppConfig):
         email_container = EmailConfigContainer()
         tg_container = TgConfigContainer()
         auth_container = AuthConfigContainer()
+        common_container = CommonConfigContainer()
 
         packages = ["common"]
 
@@ -35,6 +37,7 @@ class CommonConfig(AppConfig):
         email_container.wire(packages=packages)
         tg_container.wire(packages=packages)
         auth_container.wire(packages=packages)
+        common_container.wire(packages=packages)
 
         CONTAINERS_INITIALIZED = True
 

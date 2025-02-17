@@ -1,6 +1,7 @@
 from enum import Enum
 
 from common.models import Base
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
@@ -18,6 +19,12 @@ class Task(Base):
         "common.User", on_delete=models.CASCADE, related_name="assigned_tasks"
     )
     project = models.ForeignKey("projects.Project", on_delete=models.CASCADE, related_name="task")
+    file_slugs = ArrayField(
+        models.CharField(max_length=255, blank=True),
+        blank=True,
+        default=list,
+        verbose_name="File slugs",
+    )
     created_by = models.ForeignKey(
         "common.User", on_delete=models.CASCADE, related_name="created_tasks"
     )

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from projects.api.permissions import HasProjectRole, IsProjectOwner
 from projects.api.serializers import (
+    ProjectAvatarUpdateSerializer,
     ProjectCreateUpdateSerializer,
     ProjectPartialUpdateSerializer,
     ProjectUserSerializer,
@@ -15,6 +16,7 @@ from projects.models import Project, ProjectUser
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 
@@ -31,17 +33,34 @@ class ProjectViewSet(
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = ProjectFilter
     lookup_field = "id"
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_serializer_class(self):
+        if self.action == "upload_avatar":
+            return ProjectAvatarUpdateSerializer
         if self.action in ["update", "partial_update"]:
             return ProjectPartialUpdateSerializer
         return ProjectCreateUpdateSerializer
+
+    @action(
+        methods=["PATCH"],
+        detail=True,
+        url_path="avatars",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_avatar(self, request, *args, **kwargs):
+        project = self.get_object()
+        serializer = self.get_serializer(project, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
     permission_map: dict[str, list[PermissionClass]] = {
         "create": [IsAdmin()],
         "update": [IsProjectOwner()],
         "partial_update": [IsProjectOwner()],
         "destroy": [IsAdmin()],
+        "upload_avatar": [IsProjectOwner()],
     }
 
 

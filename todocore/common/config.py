@@ -34,3 +34,9 @@ class EmailConfig:
 @dataclass
 class AuthConfig:
     url: str = os.getenv("AUTH_SERVICE_URL")
+
+
+@dataclass
+class CommonConfig:
+    file_service_delete_url: str = os.getenv("FILE_SERVICE_DELETE_URL")
+    file_service_upload_url: str = os.getenv("FILE_SERVICE_UPLOAD_URL")
