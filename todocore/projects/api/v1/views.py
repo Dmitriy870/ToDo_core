@@ -1,3 +1,5 @@
+from common.event import EventManager, EventName
+from common.kafka_producers import KafkaTopic
 from common.permissions import IsAdmin
 from common.utils import DynamicPermissionMixin, PermissionClass
 from django.core.exceptions import ObjectDoesNotExist
@@ -63,6 +65,41 @@ class ProjectViewSet(
         "upload_avatar": [IsProjectOwner()],
     }
 
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        instance = self.get_object()
+        EventManager.send_event(
+            model_type="Project",
+            event_name=f"{EventName.GET}project",
+            event_type="MODEL",
+            entity_id=str(instance.id),
+            model_data=response.data,
+            topic=KafkaTopic.EVENTS_TOPIC,
+        )
+        return response
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+
+        EventManager.send_event(
+            event_name=f"{EventName.GET_ALL}projects",
+            model_type="Project",
+            event_type="MODEL",
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
+        return response
+
+    def perform_destroy(self, instance):
+
+        EventManager.send_event(
+            event_name=f"{EventName.DELETE}project",
+            model_type="Project",
+            event_type="MODEL",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.MODELS_TOPIC,
+        )
+        instance.delete()
+
 
 class ProjectUserViewSet(
     mixins.CreateModelMixin,
@@ -108,6 +145,17 @@ class ProjectUserViewSet(
         "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
         "delete_user": [IsProjectOwner()],
     }
+
+    def perform_destroy(self, instance):
+
+        EventManager.send_event(
+            event_name=f"{EventName.DELETE_FROM_PROJECT}",
+            model_type="ProjectUser",
+            event_type="EVENT",
+            entity_id=str(instance.id),
+            topic=KafkaTopic.EVENTS_TOPIC,
+        )
+        instance.delete()
 
     @action(detail=False, methods=["post"], url_path="project/(?P<project_pk>[^/.]+)/users")
     def add_user(self, request, *args, **kwargs):

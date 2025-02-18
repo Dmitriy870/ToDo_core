@@ -11,8 +11,8 @@ class CeleryTaskMixin:
     Mixin for managing Celery tasks.
     """
 
+    @staticmethod
     def schedule_task(
-        self,
         task,
         task_id,
         eta,
@@ -27,8 +27,8 @@ class CeleryTaskMixin:
         redis_client.set(redis_key, task_result.id)
         return task_result
 
+    @staticmethod
     def revoke_task(
-        self,
         task_id,
         task_type: TaskTypeCelery = TaskTypeCelery.SEND_MAIL,
         redis_client: Redis = Provide[ClientContainer.redis_client],
