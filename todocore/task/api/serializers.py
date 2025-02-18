@@ -1,6 +1,5 @@
-from common.event import EventManager, EventName
-from common.kafka_producers import KafkaTopic
-from common.mixins import CeleryTaskMixin
+from common.mixins.celery_mixin import CeleryTaskMixin
+from common.mixins.file_mixin import FileUploadMixin
 from common.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -21,10 +20,8 @@ class TaskSerializerMixin:
         if project_id and assignee_id:
             if not User.objects.filter(id=assignee_id).exists():
                 raise ValidationError({"assignee": "User does not exist."})
-
             if not Project.objects.filter(id=project_id).exists():
                 raise ValidationError({"project": "Project does not exist."})
-
             if not ProjectUser.objects.filter(project_id=project_id, user_id=assignee_id).exists():
                 raise ValidationError({"assignee": "The assignee does not belong to the project."})
 
@@ -57,15 +54,6 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         task = Task.objects.create(**validated_data)
         notification_time = task.deadline - timezone.timedelta(hours=1)
         self.schedule_task(send_deadline_notification, task.id, notification_time)
-        serialized_data = self.to_representation(task)
-        EventManager.send_event(
-            event_name=f"{EventName.CREATE}task",
-            model_type="Task",
-            model_data=serialized_data,
-            event_type="MODEL",
-            entity_id=str(task.id),
-            topic=KafkaTopic.MODELS_TOPIC,
-        )
         return task
 
     def update(self, instance, validated_data):
@@ -74,26 +62,10 @@ class TaskSerializer(TaskSerializerMixin, CeleryTaskMixin, serializers.ModelSeri
         self.reschedule_task(
             send_deadline_notification, instance.id, old_deadline, instance.deadline
         )
-        serialized_data = self.to_representation(instance)
-        EventManager.send_event(
-            event_name=f"{EventName.UPDATE}task",
-            model_type="Task",
-            model_data=serialized_data,
-            event_type="MODEL",
-            entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC,
-        )
         return instance
 
     def delete(self, instance):
         self.revoke_task(instance.id)
-        EventManager.send_event(
-            event_name=f"{EventName.DELETE}task",
-            model_type="Task",
-            event_type="MODEL",
-            entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC,
-        )
         instance.delete()
 
 
@@ -125,15 +97,18 @@ class TaskPartialUpdateSerializer(
             self.reschedule_task(
                 send_deadline_notification, instance.id, old_deadline, instance.deadline
             )
-
-        serialized_data = self.to_representation(instance)
-        EventManager.send_event(
-            event_name=f"{EventName.UPDATE}task",
-            model_type="Task",
-            model_data=serialized_data,
-            event_type="MODEL",
-            entity_id=str(instance.id),
-            topic=KafkaTopic.MODELS_TOPIC,
-        )
-
         return instance
+
+
+class TaskFilesUpdateSerializer(FileUploadMixin, serializers.ModelSerializer):
+    files = serializers.ListField(child=serializers.FileField(), required=True, write_only=True)
+
+    class Meta:
+        model = Task
+        fields = ("files", "file_slugs")
+        extra_kwargs = {"file_slugs": {"read_only": True}}
+
+    def update(self, instance, validated_data):
+        self.slugs_field_name = "file_slugs"
+        self.file_field_name = "files"
+        return self.update_file_field(instance, validated_data)

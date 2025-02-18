@@ -1,5 +1,6 @@
 from common.event import EventManager, EventName
 from common.kafka_producers import KafkaTopic
+from common.mixins.file_mixin import FileUploadMixin
 from projects.models import Project, ProjectUser
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -113,3 +114,17 @@ class ProjectUserUpdateSerializer(serializers.ModelSerializer):
         )
 
         return instance
+
+
+class ProjectAvatarUpdateSerializer(FileUploadMixin, serializers.ModelSerializer):
+    avatars = serializers.ListField(child=serializers.FileField(), required=True, write_only=True)
+
+    class Meta:
+        model = Project
+        fields = ("avatars", "logo_slugs")
+        extra_kwargs = {"logo_slugs": {"read_only": True}}
+
+    def update(self, instance, validated_data):
+        self.slugs_field_name = "logo_slugs"
+        self.file_field_name = "avatars"
+        return self.update_file_field(instance, validated_data)

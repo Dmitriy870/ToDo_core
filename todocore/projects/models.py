@@ -1,4 +1,5 @@
 from common.models import Base
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
@@ -6,6 +7,12 @@ class Project(Base):
     title = models.CharField(max_length=55)
     description = models.TextField()
     status = models.CharField(max_length=255)
+    logo_slugs = ArrayField(
+        models.CharField(max_length=255, blank=True),
+        blank=True,
+        default=list,
+        verbose_name="Logo slugs",
+    )
     created_by = models.ForeignKey(
         "common.User", on_delete=models.CASCADE, related_name="created_projects"
     )

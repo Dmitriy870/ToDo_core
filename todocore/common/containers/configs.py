@@ -1,4 +1,4 @@
-from common.config import AuthConfig, EmailConfig, TelegramConfig
+from common.config import AuthConfig, CommonConfig, EmailConfig, TelegramConfig
 from dependency_injector import containers, providers
 
 
@@ -12,3 +12,7 @@ class TgConfigContainer(containers.DeclarativeContainer):
 
 class EmailConfigContainer(containers.DeclarativeContainer):
     email_config = providers.Singleton(EmailConfig)
+
+
+class CommonConfigContainer(containers.DeclarativeContainer):
+    common_config = providers.Singleton(CommonConfig)

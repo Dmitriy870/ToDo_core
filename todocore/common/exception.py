@@ -7,3 +7,11 @@ class InvalidOrExpiredTokenHTTPException(APIException):
 
     def __init__(self, detail: str = "Invalid or expired token"):
         super().__init__(code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
+class FileUploadError(Exception):
+    pass
+
+
+class FileDeleteError(Exception):
+    pass
