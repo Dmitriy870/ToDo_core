@@ -61,7 +61,7 @@ class ProjectViewSet(
         "create": [IsAdmin()],
         "update": [IsProjectOwner()],
         "partial_update": [IsProjectOwner()],
-        "destroy": [IsAdmin()],
+        "destroy": [IsProjectOwner()],
         "upload_avatar": [IsProjectOwner()],
     }
 
@@ -141,9 +141,9 @@ class ProjectUserViewSet(
             raise ObjectDoesNotExist("ProjectUser not found")
 
     permission_map: dict[str, list[PermissionClass]] = {
-        "add_user": [HasProjectRole(["Maintainer", "Owner"])],
+        "add_user": [IsAdmin()],
         "update_user_role": [HasProjectRole(["Maintainer", "Owner"])],
-        "delete_user": [IsProjectOwner()],
+        "delete_user": [HasProjectRole(["Owner"])],
     }
 
     def perform_destroy(self, instance):
