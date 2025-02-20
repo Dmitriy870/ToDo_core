@@ -56,10 +56,51 @@ class ProjectRolePermission(BasePermission):
             return False
 
 
-class IsProjectOwner(ProjectRolePermission):
-    def __init__(self):
-        super().__init__()
-        self.allowed_roles = ["Owner"]
+class IsProjectOwner(BasePermission):
+    def has_permission(self, request, view):
+        if getattr(request, "role", None) == "admin":
+            return True
+
+        project_pk = view.kwargs.get("project_pk") or view.kwargs.get("id")
+        if not project_pk:
+            logger.info("No project_pk found in URL")
+            return False
+
+        try:
+            project = Project.objects.get(pk=project_pk)
+            logger.info(
+                f"Checking owner permission: user {request.user.id} created_by {project.created_by_id}"  # noqa
+            )
+            return project.created_by_id == request.user_id
+        except Project.DoesNotExist:
+            logger.info(f"Project with id {project_pk} does not exist")
+            return False
+
+    def has_object_permission(self, request, view, obj):
+        if getattr(request, "role", None) == "admin":
+            return True
+
+        if isinstance(obj, Project):
+            logger.info(
+                f"Checking object owner permission for project {obj.id}: "
+                f"user {request.user.id} vs project.created_by {obj.created_by_id}"
+            )
+            return obj.created_by_id == request.user_id
+
+        project_id = getattr(obj, "project_id", None)
+        if not project_id:
+            logger.info(f"User {request.user_id} has no project reference")
+            return False
+        try:
+            project = Project.objects.get(pk=project_id)
+            logger.info(
+                f"Checking object owner permission for project {project_id}: "
+                f"user {request.user.id} vs project.created_by {project.created_by_id}"
+            )
+            return project.created_by_id == request.user_id
+        except Project.DoesNotExist:
+            logger.info(f"Project with id {project_id} does not exist")
+            return False
 
 
 class HasProjectRole(ProjectRolePermission):
