@@ -31,6 +31,7 @@ class TaskViewSet(DynamicPermissionMixin, viewsets.ModelViewSet):
             IsAssignee(),
         ],
         "destroy": [HasTaskRole(["Owner"])],
+        "upload_files": [HasTaskRole(["Developer", "Maintainer", "Owner"])],
     }
 
     def get_serializer_class(self):
